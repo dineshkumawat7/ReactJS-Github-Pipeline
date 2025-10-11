@@ -100,9 +100,9 @@ jobs:
         if: success()
         run: |
           echo "Preparing to upload production build artifact..."
-          if [ -d "build" ]; then
+          if [ -d "dist" ]; then
             echo "Build directory found. Contents:"
-            ls -la build
+            ls -la dist
           else
             echo "Build directory not found. Ensure 'npm run build' completed successfully."
             exit 1
@@ -113,7 +113,7 @@ jobs:
         with:
           name: react-build-${{ github.run_number }}
           path: |
-            build/
+            dist/
           if-no-files-found: error
           retention-days: 7
             echo "Build artifact 'react-build-${{ github.run_number }}' uploaded successfully."

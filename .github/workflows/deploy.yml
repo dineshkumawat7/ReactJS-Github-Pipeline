@@ -17,13 +17,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: react-build-${{ github.run_number }}
-          path: build/
+          path: dist/
 
       - name: Verify downloaded artifact
         run: |
           echo "Build artifact 'react-build-${{ github.run_number }}' downloaded successfully."
           echo "Contents of the build directory:"
-          ls -la build/
+          ls -la dist/
 
       #### 2. Deploy to GitHub Pages ####
       - name: Deploy to GitHub Pages
@@ -31,7 +31,7 @@ jobs:
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GH_PAT }}
-          publish_dir: ./build
+          publish_dir: ./dist
 
       #### 3. Deployment success message ####
       - name: Deployment status message
