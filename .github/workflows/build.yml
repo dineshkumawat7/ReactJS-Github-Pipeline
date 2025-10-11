@@ -1,0 +1,119 @@
+name: React Build Pipeline
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+#### Global environment variable ####
+env:
+  NODE_VERSION: 22
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      #### 1. Checkout the latest code ####
+      - name: Checkout the latest code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Verify the latest code checkout
+        run: |
+          echo "Verifying checkout..."
+          pwd
+          ls -la 
+          git status
+
+      #### 2.  Set up Node.js environment ####
+      - name: Set up Node.js environment
+        id: setup-node
+        run: |
+          echo "Checking Node.js environment..."
+          if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
+            echo "Node.js is already installed."
+            echo "skip_node=true" >> $GITHUB_ENV
+          else
+            echo "Node.js is not installed. Installing now..."
+            echo "skip_node=false" >> $GITHUB_ENV
+          fi
+
+      - name: Set up Node.js
+        if: env.skip_node == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          check-latest: true
+
+      - name: Verify Node.js and npm versions
+        run: |
+          echo "Node.js version:"
+          node -v
+          echo "npm version:"
+          npm -v
+
+      #### 3. Install dependencies ####
+      - name: Install dependencies
+        run: |
+          echo "Installing dependencies..."
+          if npm install; then
+            echo "Dependencies installed successfully."
+          else
+            echo "Failed to install dependencies."
+            exit 1
+          fi
+
+      #### 4. Run tests ####
+      - name: Run tests
+        run: |
+          echo "Running tests..."
+          if npm pkg get scripts.test | grep -q 'null'; then
+            echo "No test script found in package.json. Skipping tests..."
+          else
+            echo "Test script found. Executing tests..."
+            if npm run test; then
+              echo "All tests passed successfully."
+            else
+              echo "Some tests failed. Check the logs above for details."
+              exit 1
+            fi
+          fi
+
+      #### 5. Build React app ####
+      - name: Build React app
+        run: |
+          echo "Building the React app..."
+          if npm run build; then
+            echo "React app built successfully."
+          else
+            echo "Failed to build the React app." >&2
+            exit 1
+          fi
+
+      #### 6. Upload build artifact to GitHub ####
+      - name: Upload production build artifact
+        if: success()
+        run: |
+          echo "Preparing to upload production build artifact..."
+          if [ -d "build" ]; then
+            echo "Build directory found. Contents:"
+            ls -la build
+          else
+            echo "Build directory not found. Ensure 'npm run build' completed successfully."
+            exit 1
+          fi
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: react-build-${{ github.run_number }}
+          path: |
+            build/
+          if-no-files-found: error
+          retention-days: 7
+            echo "Build artifact 'react-build-${{ github.run_number }}' uploaded successfully."
