@@ -111,9 +111,9 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: react-build-${{ github.run_number }}
+          name: react-build
           path: |
             dist/
           if-no-files-found: error
           retention-days: 7
-            echo "Build artifact 'react-build-${{ github.run_number }}' uploaded successfully."
+            echo "Build artifact react-build uploaded successfully."

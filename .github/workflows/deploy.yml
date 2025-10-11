@@ -16,12 +16,12 @@ jobs:
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
-          name: react-build-${{ github.run_number }}
+          name: react-build
           path: dist/
 
       - name: Verify downloaded artifact
         run: |
-          echo "Build artifact 'react-build-${{ github.run_number }}' downloaded successfully."
+          echo "Build artifact react-build downloaded successfully."
           echo "Contents of the build directory:"
           ls -la dist/
 
