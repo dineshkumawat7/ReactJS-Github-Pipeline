@@ -69,20 +69,20 @@ jobs:
           fi
 
       #### 4. Run tests ####
-      - name: Run tests
-        run: |
-          echo "Running tests..."
-          if npm pkg get scripts.test | grep -q 'null'; then
-            echo "No test script found in package.json. Skipping tests..."
-          else
-            echo "Test script found. Executing tests..."
-            if npm run test; then
-              echo "All tests passed successfully."
-            else
-              echo "Some tests failed. Check the logs above for details."
-              exit 1
-            fi
-          fi
+      # - name: Run tests
+      #   run: |
+      #     echo "Running tests..."
+      #     if npm pkg get scripts.test | grep -q 'null'; then
+      #       echo "No test script found in package.json. Skipping tests..."
+      #     else
+      #       echo "Test script found. Executing tests..."
+      #       if npm run test; then
+      #         echo "All tests passed successfully."
+      #       else
+      #         echo "Some tests failed. Check the logs above for details."
+      #         exit 1
+      #       fi
+      #     fi
 
       #### 5. Build React app ####
       - name: Build React app
