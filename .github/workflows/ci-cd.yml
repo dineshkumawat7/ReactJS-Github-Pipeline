@@ -160,8 +160,9 @@ jobs:
           render --version
 
       - name: Log in to Render CLI
-        run: |
-          render login --api-key ${{ secrets.RENDER_SERVICE_API_KEY }}
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
+        run: render login --confirm
 
       # 5. Deploy Docker image on Render
       - name: Deploy to Render
