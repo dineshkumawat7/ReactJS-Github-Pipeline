@@ -147,25 +147,28 @@ jobs:
     needs: build
     steps:
       # 2. Install Render CLI if not installed
-      - name: Install Render CLI
+      - name: Install Render CLI (if missing)
         run: |
           if ! command -v render &> /dev/null
           then
-            echo "Render CLI not found. Installing..."
-            curl -fsSL https://raw.githubusercontent.com/render-oss/cli/refs/heads/main/bin/install.sh | sh
+            echo "Render CLI not found. Installing v2.4.2..."
+            curl -L https://github.com/render-oss/cli/releases/download/v2.4.2/cli_2.4.2_linux_amd64.zip -o render.zip
+            unzip render.zip
+            sudo mv cli_v2.4.2 /usr/local/bin/render
+            rm render.zip
           else
             echo "Render CLI already installed."
           fi
-          export PATH="$HOME/.render/bin:$PATH"
           render --version
 
       - name: Log in to Render CLI
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
-        run: render login --confirm
+        run: |
+          render login --confirm
 
       # 5. Deploy Docker image on Render
-      - name: Deploy to Render
+      - name: Deploy Docker Image to Render
         run: |
           # Check if service exists
           SERVICE_EXISTS=$(render services list | grep -w $RENDER_SERVICE_NAME || true)
@@ -181,4 +184,3 @@ jobs:
             SERVICE_ID=$(render services list | grep -w $RENDER_SERVICE_NAME | awk '{print $1}')
             render services update $SERVICE_ID --docker-image $DOCKER_IMAGE --wait
           fi
-          render deploy ${{ secrets.RENDER_SERVICE_ID }}
