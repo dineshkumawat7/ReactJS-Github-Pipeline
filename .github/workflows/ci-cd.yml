@@ -152,7 +152,7 @@ jobs:
           if ! command -v render &> /dev/null
           then
             echo "Render CLI not found. Installing..."
-            curl -fsSL https://cdn.render.com/cli/install.sh | bash
+            curl -fsSL https://raw.githubusercontent.com/render-oss/cli/refs/heads/main/bin/install.sh | sh
           else
             echo "Render CLI already installed."
           fi
