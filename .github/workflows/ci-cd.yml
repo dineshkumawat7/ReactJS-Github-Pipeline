@@ -11,13 +11,13 @@ env:
   NODE_VERSION: 22
   IMAGE_NAME: react-app
   CONTAINER_NAME: react-container
-  REGISTRY: ghcr.io
+  REGISTRY: docker.io
   IMAGE_TAG: latest
 
   RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
-  DOCKER_IMAGE: your-dockerhub-username/your-app:latest
+  DOCKER_IMAGE: dinesh7627/react-app:latest
   RENDER_SERVICE_NAME: test-react-render-service
-  RENDER_SERVICE_TYPE: web # 'web' or 'background'
+  RENDER_SERVICE_TYPE: web_service
 
 jobs:
   build:
@@ -146,8 +146,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      # 2. Install Render CLI if not installed
-      - name: Install Render CLI (if missing)
+      # 1. Install Render CLI if not installed
+      - name: Install Render CLI
         run: |
           if ! command -v render &> /dev/null
           then
@@ -161,6 +161,46 @@ jobs:
           fi
           render --version
 
+      - name: Ensure Render Service Exists
+        run: |
+          echo "Checking if Render service '$RENDER_SERVICE_NAME' exists..."
+
+          SERVICE_ID=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" \
+            "https://api.render.com/v1/services" | jq -r ".[] | select(.service.name==\"$RENDER_SERVICE_NAME\") | .service.id")
+
+          if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "null" ]; then
+            echo "Service not found. Creating new service..."
+            CREATE_RESPONSE=$(curl -s -X POST https://api.render.com/v1/services \
+              -H "Authorization: Bearer $RENDER_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"service\": {
+                  \"name\": \"$RENDER_SERVICE_NAME\",
+                  \"type\": \"$RENDER_SERVICE_TYPE\",
+                  \"env\": \"docker\",
+                  \"plan\": \"free\",
+                  \"dockerDetails\": {
+                    \"image\": \"$DOCKER_IMAGE\",
+                    \"port\": 8080
+                  }
+                }
+              }")
+
+            SERVICE_ID=$(echo $CREATE_RESPONSE | jq -r '.service.id')
+
+            if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "null" ]; then
+              echo "Failed to create Render service. Response:"
+              echo "$CREATE_RESPONSE"
+              exit 1
+            fi
+
+            echo "Created new Render service with ID: $SERVICE_ID"
+            echo "SERVICE_ID=$SERVICE_ID" >> $GITHUB_ENV
+          else
+            echo "Existing service found with ID: $SERVICE_ID"
+            echo "SERVICE_ID=$SERVICE_ID" >> $GITHUB_ENV
+          fi
+
       - name: Log in to Render CLI
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
@@ -168,19 +208,10 @@ jobs:
           render login -o json
 
       # 5. Deploy Docker image on Render
-      - name: Deploy Docker Image to Render
+      - name: Trigger deploy with Render CLI
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
+          CI: true
         run: |
-          # Check if service exists
-          SERVICE_EXISTS=$(render services list | grep -w $RENDER_SERVICE_NAME || true)
-          if [ -z "$SERVICE_EXISTS" ]; then
-            echo "Service not found. Creating new Render service..."
-            render services create \
-              --name $RENDER_SERVICE_NAME \
-              --service-type $RENDER_SERVICE_TYPE \
-              --env docker \
-              --docker-image $DOCKER_IMAGE
-          else
-            echo "Service exists. Updating Docker image..."
-            SERVICE_ID=$(render services list | grep -w $RENDER_SERVICE_NAME | awk '{print $1}')
-            render services update $SERVICE_ID --docker-image $DOCKER_IMAGE --wait
-          fi
+          echo "Triggering deployment for service ID: $SERVICE_ID"
+          render deploys create $SERVICE_ID --output json --confirm
