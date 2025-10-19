@@ -165,7 +165,7 @@ jobs:
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
         run: |
-          render login --confirm
+          render login -o json
 
       # 5. Deploy Docker image on Render
       - name: Deploy Docker Image to Render
