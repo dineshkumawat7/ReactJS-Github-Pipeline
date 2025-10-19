@@ -14,6 +14,11 @@ env:
   REGISTRY: ghcr.io
   IMAGE_TAG: latest
 
+  RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
+  DOCKER_IMAGE: your-dockerhub-username/your-app:latest
+  RENDER_SERVICE_NAME: test-react-render-service
+  RENDER_SERVICE_TYPE: web # 'web' or 'background'
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -137,60 +142,42 @@ jobs:
       - name: Push image to Docker Hub
         run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
 
-      #### 6. Upload build artifact to GitHub ####
-      - name: Upload production build artifact
-        if: success()
-        run: |
-          echo "Preparing to upload production build artifact..."
-          if [ -d "dist" ]; then
-            echo "Build directory found. Contents:"
-            ls -la dist
-          else
-            echo "Build directory not found. Ensure 'npm run build' completed successfully."
-            exit 1
-          fi
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: react-build-${{ github.run_number }}
-          path: |
-            dist/
-          if-no-files-found: error
-          retention-days: 7
-            echo "Build artifact 'react-build-${{ github.run_number }}' uploaded successfully."
-
   deploy:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      #### 1. Dowload build artifact ####
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: react-build-${{ github.run_number }}
-          path: dist/
-
-      - name: Verify downloaded artifact
+      # 2. Install Render CLI if not installed
+      - name: Install Render CLI
         run: |
-          echo "Build artifact 'react-build-${{ github.run_number }}' downloaded successfully."
-          echo "Contents of the build directory:"
-          ls -la dist/
-
-      #### 2. Deploy to GitHub Pages ####
-      - name: Deploy to GitHub Pages
-        id: deploy
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GH_PAT }}
-          publish_dir: ./dist
-
-      #### 3. Deployment success message ####
-      - name: Deployment status message
-        run: |
-          if [ "${{ steps.deploy.outcome }}" = "success" ]; then
-            echo "Deployment succeeded."
+          if ! command -v render &> /dev/null
+          then
+            echo "Render CLI not found. Installing..."
+            curl -fsSL https://cdn.render.com/cli/install.sh | bash
           else
-            echo "Deployment failed. Please check the logs for details."
-            exit 1
+            echo "Render CLI already installed."
           fi
+          export PATH="$HOME/.render/bin:$PATH"
+          render --version
+
+      - name: Log in to Render CLI
+        run: |
+          render login --api-key ${{ secrets.RENDER_SERVICE_API_KEY }}
+
+      # 5. Deploy Docker image on Render
+      - name: Deploy to Render
+        run: |
+          # Check if service exists
+          SERVICE_EXISTS=$(render services list | grep -w $RENDER_SERVICE_NAME || true)
+          if [ -z "$SERVICE_EXISTS" ]; then
+            echo "Service not found. Creating new Render service..."
+            render services create \
+              --name $RENDER_SERVICE_NAME \
+              --service-type $RENDER_SERVICE_TYPE \
+              --env docker \
+              --docker-image $DOCKER_IMAGE
+          else
+            echo "Service exists. Updating Docker image..."
+            SERVICE_ID=$(render services list | grep -w $RENDER_SERVICE_NAME | awk '{print $1}')
+            render services update $SERVICE_ID --docker-image $DOCKER_IMAGE --wait
+          fi
+          render deploy ${{ secrets.RENDER_SERVICE_ID }}
