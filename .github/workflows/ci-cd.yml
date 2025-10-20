@@ -168,6 +168,8 @@ jobs:
           render login -o json
 
       - name: Get authenticated user info
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
         run: |
           render whoami -o json
 
