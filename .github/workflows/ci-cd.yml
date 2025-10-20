@@ -26,17 +26,22 @@ jobs:
     steps:
       #### 1. Checkout the latest code ####
       - name: Checkout the latest code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: true
-
-      - name: Verify the latest code checkout
         run: |
-          echo "Verifying checkout..."
+          echo "---------------------------------------"
+          echo "Checking out latest code..."
+          echo "---------------------------------------"
+
+          git clone https://github.com/${{ github.repository }} . --depth=1
+          echo "Current Git branch:"
+          git branch --show-current
+
+          echo "Current working directory:"
           pwd
-          ls -la 
+          echo "Directory contents:"
+          ls -la
+          echo "Git status:"
           git status
+          echo "Checkout completed successfully!"
 
       #### 2.  Set up Node.js environment ####
       - name: Set up Node.js environment
@@ -104,43 +109,69 @@ jobs:
             exit 1
           fi
 
-      - name: Ensure Docker is installed
+      - name: Checking for Docker installation
         run: |
+          echo "---------------------------------------"
+          echo "Checking for Docker installation..."
+          echo "---------------------------------------"
+
           if ! command -v docker &> /dev/null
           then
             echo "Docker not found — installing now..."
-            sudo apt-get update
-            sudo apt-get install -y ca-certificates curl gnupg lsb-release
-            sudo mkdir -p /etc/apt/keyrings
-            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-            echo \
-              "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-              https://download.docker.com/linux/ubuntu \
-              $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-            sudo apt-get update
-            sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+            echo "Updating package list..."
+            sudo apt-get update -y
+
+            echo "Installing prerequisites..."
+            sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+
+            echo "Adding Docker's official GPG key..."
+            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+           
+            echo "Adding Docker repository..."
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
+             https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+            echo "Updating package list again..."
+            sudo apt-get update -y
+
+            echo "Installing Docker CE..."
+            sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+
+            echo "Docker installed successfully!"
+            docker --version
           else
             echo "Docker is already installed!"
             docker --version
           fi
-
-      - name: Verify Docker Installation
-        run: docker --version
+          echo "Docker setup check completed."
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          echo "Logging in to Docker Hub..."
+          echo "${DOCKERHUB_TOKEN}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
+          echo "Logged in to Docker Hub successfully."
 
       - name: Build Docker image
-        run: docker build -t ${{ env.IMAGE_NAME }} .
+        run: |
+          echo "Building Docker image: ${{ env.IMAGE_NAME }}..."
+          docker build -t ${{ env.IMAGE_NAME }}
+          echo "Docker image built successfully: ${{ env.IMAGE_NAME }}"
 
       - name: Tag image
-        run: docker tag ${{ env.IMAGE_NAME }} ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+        run: |
+          echo "Tagging Docker image for Docker Hub..."
+          docker tag ${{ env.IMAGE_NAME }} ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+          echo "Docker image tagged successfully: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest"
 
       - name: Push image to Docker Hub
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+        run: |
+          echo "Pushing Docker image to Docker Hub..."
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+          echo "Docker image pushed successfully to Docker Hub: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest"
 
   deploy:
     runs-on: ubuntu-latest
@@ -184,7 +215,7 @@ jobs:
           render login -o json
           echo "Login successful!"
           echo "Render Authenticated user:"
-          render whoami -o json
+          # render whoami -o json
 
       - name: Ensure Render Service Exists
         run: |
