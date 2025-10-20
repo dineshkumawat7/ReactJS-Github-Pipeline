@@ -161,6 +161,16 @@ jobs:
           fi
           render --version
 
+      - name: Log in to Render CLI
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
+        run: |
+          render login -o json
+
+      - name: Get authenticated user info
+        run: |
+          render whoami
+
       - name: Ensure Render Service Exists
         run: |
           echo "Checking if Render service '$RENDER_SERVICE_NAME' exists..."
@@ -200,12 +210,6 @@ jobs:
             echo "Existing service found with ID: $SERVICE_ID"
             echo "SERVICE_ID=$SERVICE_ID" >> $GITHUB_ENV
           fi
-
-      - name: Log in to Render CLI
-        env:
-          RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
-        run: |
-          render login -o json
 
       # 5. Deploy Docker image on Render
       - name: Trigger deploy with Render CLI
