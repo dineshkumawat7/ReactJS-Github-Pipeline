@@ -146,32 +146,48 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      # 1. Install Render CLI if not installed
       - name: Install Render CLI
         run: |
+          echo "---------------------------------------"
+          echo "Checking for Render CLI installation..."
+          echo "---------------------------------------"
+
           if ! command -v render &> /dev/null
           then
-            echo "Render CLI not found. Installing v2.4.2..."
-            curl -L https://github.com/render-oss/cli/releases/download/v2.4.2/cli_2.4.2_linux_amd64.zip -o render.zip
-            unzip render.zip
+            echo "Render CLI not found. Installing version v2.4.2..."
+            DOWNLOAD_URL="https://github.com/render-oss/cli/releases/download/v2.4.2/cli_2.4.2_linux_amd64.zip"
+            TEMP_FILE="render_cli.zip"
+            echo "Downloading Render CLI from $DOWNLOAD_URL"
+            curl -fSL $DOWNLOAD_URL -o $TEMP_FILE
+            echo "Extracting Render CLI..."
+            unzip $TEMP_FILE
+            echo "Moving Render CLI to /usr/local/bin/render..."
             sudo mv cli_v2.4.2 /usr/local/bin/render
-            rm render.zip
+            echo "Cleaning up temporary files..."
+            rm -f $TEMP_FILE
           else
-            echo "Render CLI already installed."
+            echo "Render CLI already installed. Skipping installation."
           fi
-          render --version
+          echo "------------------------------------------"
+          echo "Render CLI Version: $(render --version)"
+          echo "------------------------------------------"
+
+          echo "Render CLI setup completed successfully."
 
       - name: Log in to Render CLI
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
         run: |
+          echo "---------------------------------------"
+          echo "Logging in to Render CLI..."
+          echo "---------------------------------------"
           render login -o json
+          echo "---------------------------------------"  
+          echo "Login successful!"
 
-      - name: Get authenticated user info
-        env:
-          RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
-        run: |
-          render whoami -o json
+          echo "---------------------------------------"
+          echo "Render Authenticated user:"
+          echo "---------------------------------------"
 
       - name: Ensure Render Service Exists
         run: |
