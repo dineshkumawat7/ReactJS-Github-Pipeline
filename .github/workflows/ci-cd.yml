@@ -9,11 +9,12 @@ on:
 #### Global environment variable ####
 env:
   NODE_VERSION: 22
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   IMAGE_NAME: react-app
   CONTAINER_NAME: react-container
   REGISTRY: docker.io
   IMAGE_TAG: latest
-
   RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
   DOCKER_IMAGE: dinesh7627/react-app:latest
   RENDER_SERVICE_NAME: test-react-render-service
@@ -134,8 +135,8 @@ jobs:
 
       - name: Log in to Docker Hub
         env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_USERNAME: ${{ env.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ env.DOCKERHUB_TOKEN }}
         run: |
           echo "Logging in to Docker Hub..."
           echo "${DOCKERHUB_TOKEN}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
