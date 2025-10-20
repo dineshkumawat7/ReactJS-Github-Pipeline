@@ -180,6 +180,7 @@ jobs:
           echo "---------------------------------------"
           echo "Logging in to Render CLI..."
           echo "---------------------------------------"
+          export RENDER_API_KEY="$RENDER_API_KEY"
           render login -o json
           echo "Login successful!"
           echo "Render Authenticated user:"
