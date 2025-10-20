@@ -148,6 +148,7 @@ jobs:
     steps:
       - name: Install Render CLI
         run: |
+
           echo "---------------------------------------"
           echo "Checking for Render CLI installation..."
           echo "---------------------------------------"
@@ -168,26 +169,21 @@ jobs:
           else
             echo "Render CLI already installed. Skipping installation."
           fi
-          echo "------------------------------------------"
           echo "Render CLI Version: $(render --version)"
-          echo "------------------------------------------"
-
           echo "Render CLI setup completed successfully."
 
       - name: Log in to Render CLI
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
         run: |
+
           echo "---------------------------------------"
           echo "Logging in to Render CLI..."
           echo "---------------------------------------"
           render login -o json
-          echo "---------------------------------------"  
           echo "Login successful!"
-
-          echo "---------------------------------------"
           echo "Render Authenticated user:"
-          echo "---------------------------------------"
+          render whoami -o json
 
       - name: Ensure Render Service Exists
         run: |
