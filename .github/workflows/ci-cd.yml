@@ -169,7 +169,7 @@ jobs:
 
       - name: Get authenticated user info
         run: |
-          render whoami
+          render whoami -o json
 
       - name: Ensure Render Service Exists
         run: |
