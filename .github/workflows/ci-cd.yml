@@ -297,7 +297,6 @@ jobs:
               --output json \
               --confirm \
               --wait
-            echo "Deployment in progress... Please wait."
           else
             echo "Render Service ID '$RENDER_SERVICE_ID' is invalid or not found!"
             echo "Possible reasons:"
