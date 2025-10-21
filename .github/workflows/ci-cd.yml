@@ -26,19 +26,9 @@ jobs:
       ################# 1. Checkout the latest code ##################
       #===============================================================
       - name: Checkout the latest code
-        run: |
-          echo "Checking out latest code..."
-          git clone https://github.com/${{ github.repository }} . --depth=1
-          echo "Current Git branch:"
-          git branch --show-current
-
-          echo "Current working directory:"
-          pwd
-          echo "Directory contents:"
-          ls -la
-          echo "Git status:"
-          git status
-          echo "Checkout completed successfully!"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       #================================================================
       ################# 2. Set up Node.js environment #################
