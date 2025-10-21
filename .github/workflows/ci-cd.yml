@@ -10,7 +10,7 @@ on:
 ################# Global environment variable ##################
 #===============================================================
 env:
-  NODE_VERSION: 22
+  NODE_VERSION: 22.21.0
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
   DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   IMAGE_NAME: react-vite-app
@@ -46,15 +46,7 @@ jobs:
               sudo mkdir -p /usr/local/node
               sudo tar -xJf node.tar.xz -C /usr/local/node --strip-components=1
               rm node.tar.xz
-              if ! grep -q 'export PATH=/usr/local/node/bin:$PATH' ~/.profile; then
-                echo 'export PATH=/usr/local/node/bin:$PATH' >> ~/.profile
-              fi
-              if ! grep -q 'export PATH=/usr/local/node/bin:$PATH' ~/.bashrc; then
-                echo 'export PATH=/usr/local/node/bin:$PATH' >> ~/.bashrc
-              fi
-
-              # Reload shell environment
-              source ~/.profile
+              echo 'export PATH=/usr/local/nodejs/bin:$PATH' >> ~/.bashrc
               source ~/.bashrc
               echo "Node.js updated to version $(node -v)"
             fi
@@ -64,17 +56,8 @@ jobs:
             sudo mkdir -p /usr/local/node
             sudo tar -xJf node.tar.xz -C /usr/local/node --strip-components=1
             rm node.tar.xz
-                        if ! grep -q 'export PATH=/usr/local/node/bin:$PATH' ~/.profile; then
-                echo 'export PATH=/usr/local/node/bin:$PATH' >> ~/.profile
-              fi
-              if ! grep -q 'export PATH=/usr/local/node/bin:$PATH' ~/.bashrc; then
-                echo 'export PATH=/usr/local/node/bin:$PATH' >> ~/.bashrc
-              fi
-
-              # Reload shell environment
-              source ~/.profile
-              source ~/.bashrc
-
+            echo 'export PATH=/usr/local/nodejs/bin:$PATH' >> ~/.bashrc
+            source ~/.bashrc
             echo "Node.js installed successfully."
           fi
           echo "Node.js version: $(node -v)"
