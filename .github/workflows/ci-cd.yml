@@ -297,6 +297,7 @@ jobs:
               --output json \
               --confirm \
               --wait
+            echo ""
           else
             echo "Render Service ID '$RENDER_SERVICE_ID' is invalid or not found!"
             echo "Possible reasons:"
