@@ -89,7 +89,7 @@ jobs:
           echo "Installing dependencies..."
           if [ -f "package-lock.json" ]; then
             echo "Detected package-lock.json — running 'npm ci' for a clean install..."
-            if npm ci --no-audit --prefer-offline; then
+            if npm ci --no-optional --prefer-offline --progress=false --force; then
               echo "Dependencies installed successfully using 'npm ci'."
             else
               echo "npm ci failed — retrying once with 'npm install'..."
@@ -102,7 +102,7 @@ jobs:
             fi
           else
             echo "No package-lock.json found — running 'npm install'..."
-            if npm install --no-audit --prefer-offline; then
+            if npm install --no-optional --prefer-offline --progress=false --force; then
               echo "Dependencies installed successfully using 'npm install'."
             else
               echo "Failed to install dependencies. Exiting..." >&2
