@@ -275,59 +275,19 @@ jobs:
           export RENDER_API_KEY="$RENDER_API_KEY"
           render login -o json
           echo "Login successful!"
-          # echo "Render Authenticated user:"
-          # render whoami -o json
 
       #===============================================================
-      ################ 5. Ensure Render Service Exists ###############
-      #===============================================================
-      - name: Ensure Render Service Exists
-        run: |
-          echo "Checking if Render service '$RENDER_SERVICE_NAME' exists..."
-
-          SERVICE_ID=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" \
-            "https://api.render.com/v1/services" | jq -r ".[] | select(.service.name==\"$RENDER_SERVICE_NAME\") | .service.id")
-
-          if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "null" ]; then
-            echo "Service not found. Creating new service..."
-            CREATE_RESPONSE=$(curl -s -X POST https://api.render.com/v1/services \
-              -H "Authorization: Bearer $RENDER_API_KEY" \
-              -H "Content-Type: application/json" \
-              -d "{
-                \"service\": {
-                  \"name\": \"$RENDER_SERVICE_NAME\",
-                  \"type\": \"$RENDER_SERVICE_TYPE\",
-                  \"env\": \"docker\",
-                  \"plan\": \"free\",
-                  \"dockerDetails\": {
-                    \"image\": \"$DOCKER_IMAGE\",
-                    \"port\": 8080
-                  }
-                }
-              }")
-
-            SERVICE_ID=$(echo $CREATE_RESPONSE | jq -r '.service.id')
-
-            if [ -z "$SERVICE_ID" ] || [ "$SERVICE_ID" == "null" ]; then
-              echo "Failed to create Render service. Response:"
-              echo "$CREATE_RESPONSE"
-              exit 1
-            fi
-
-            echo "Created new Render service with ID: $SERVICE_ID"
-            echo "SERVICE_ID=$SERVICE_ID" >> $GITHUB_ENV
-          else
-            echo "Existing service found with ID: $SERVICE_ID"
-            echo "SERVICE_ID=$SERVICE_ID" >> $GITHUB_ENV
-          fi
-
-      #===============================================================
-      ############### 6. Deploy Docker image on Render ###############
+      ############### 5. Deploy Docker image on Render ###############
       #===============================================================
       - name: Trigger deploy with Render CLI
-        env:
-          RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
-          CI: true
         run: |
+          IMAGE_NAME=${{ env.IMAGE_NAME }}
+          IMAGE_TAG=${{ env.IMAGE_TAG }}
+          DOCKERHUB_USERNAME=${{ env.DOCKERHUB_USERNAME }}
+          DOCKER_IMAGE="$DOCKERHUB_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
+
           echo "Triggering deployment for service ID: $SERVICE_ID"
-          render deploys create srv-d3rn826r433s73eahqe0 --output json --confirm
+          render deploys create srv-d3rn826r433s73eahqe0 \
+            --image $DOCKER_IMAGE \
+            --output json --confirm
+          echo "Deployment success..."
