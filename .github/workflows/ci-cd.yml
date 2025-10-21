@@ -282,15 +282,16 @@ jobs:
       ############### 5. Deploy Docker image on Render ###############
       #===============================================================
       - name: Trigger deploy with Render CLI
-        env:
-          RENDER_SERVICE_ID: ${{ env.RENDER_SERVICE_ID }}
-          IMAGE_NAME: ${{ env.IMAGE_NAME }}
-          IMAGE_TAG: ${{ env.IMAGE_TAG }}
-          DOCKERHUB_USERNAME: ${{ env.DOCKERHUB_USERNAME }}
-          DOCKER_REGISTRY: ${{ env.DOCKER_REGISTRY }}
         run: |
           echo "Triggering deployment for service ID: $RENDER_SERVICE_ID"
+
+          IMAGE_NAME=${{ env.IMAGE_NAME }}
+          IMAGE_TAG=${{ env.IMAGE_TAG }}
+          DOCKERHUB_USERNAME=${{ env.DOCKERHUB_USERNAME }}
+          DOCKER_REGISTRY=${{ env.DOCKER_REGISTRY }}
+          RENDER_SERVICE_ID: ${{ env.RENDER_SERVICE_ID }}
           DOCKER_IMAGE=$DOCKER_REGISTRY/$DOCKERHUB_USERNAME/$IMAGE_NAME:$IMAGE_TAG
+
           echo "Deployment starting for $DOCKER_IMAGE"
           if render deploys list "$RENDER_SERVICE_ID" -o json >/dev/null 2>&1; then
             render deploys create $RENDER_SERVICE_ID \
