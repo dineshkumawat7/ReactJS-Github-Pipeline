@@ -53,7 +53,7 @@ jobs:
               echo "Node.js version ${NODE_VERSION} is already installed."
             else
               echo "Node.js version mismatch (found v${CURRENT_VERSION}, expected v${NODE_VERSION}). Updating..."
-              curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}.x/node-v${NODE_VERSION}.x-linux-x64.tar.xz -o node.tar.xz
+              curl -fsSL https://nodejs.org/dist/v${{ env.NODE_VERSION }}/node-v${{ env.NODE_VERSION }}-linux-x64.tar.xz -o node.tar.xz
               sudo mkdir -p /usr/local/node
               sudo tar -xJf node.tar.xz -C /usr/local/node --strip-components=1
               rm node.tar.xz
@@ -222,20 +222,6 @@ jobs:
           echo "Pushing Docker image to Docker Hub..."
           if docker push $DOCKER_IMAGE:$IMAGE_TAG; then
             echo "Docker image pushed successfully to Docker Hub: $DOCKER_IMAGE:$IMAGE_TAG"
-          else
-            echo "Failed to push Docker image to Docker Hub. Exiting..." >&2
-            exit 1
-          fi
-
-      #================================================================
-      ################# Build, Tag & Push Docker image ################
-      #================================================================
-      - name: Build, Tag & Push Docker Image
-        run: |
-          echo "Pushing Docker image to Docker Hub..."
-           DOCKER_IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}"
-          if docker push $DOCKER_IMAGE:latest; then
-            echo "Docker image pushed successfully to Docker Hub: $DOCKER_IMAGE:latest"
           else
             echo "Failed to push Docker image to Docker Hub. Exiting..." >&2
             exit 1
