@@ -280,11 +280,15 @@ jobs:
       ############### 5. Deploy Docker image on Render ###############
       #===============================================================
       - name: Trigger deploy with Render CLI
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
         run: |
           IMAGE_NAME=${{ env.IMAGE_NAME }}
           IMAGE_TAG=${{ env.IMAGE_TAG }}
           DOCKERHUB_USERNAME=${{ env.DOCKERHUB_USERNAME }}
           DOCKER_IMAGE="$DOCKERHUB_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
+
+          export RENDER_API_KEY="$RENDER_API_KEY"
 
           echo "Triggering deployment for service ID: $SERVICE_ID"
           render deploys create srv-d3rn826r433s73eahqe0 \
