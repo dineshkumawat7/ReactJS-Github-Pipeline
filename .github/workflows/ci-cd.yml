@@ -283,8 +283,6 @@ jobs:
       #===============================================================
       - name: Trigger deploy with Render CLI
         run: |
-          echo "Triggering deployment for service ID: $RENDER_SERVICE_ID"
-
           IMAGE_NAME=${{ env.IMAGE_NAME }}
           IMAGE_TAG=${{ env.IMAGE_TAG }}
           DOCKERHUB_USERNAME=${{ env.DOCKERHUB_USERNAME }}
@@ -292,7 +290,7 @@ jobs:
           RENDER_SERVICE_ID: ${{ env.RENDER_SERVICE_ID }}
           DOCKER_IMAGE=$DOCKER_REGISTRY/$DOCKERHUB_USERNAME/$IMAGE_NAME:$IMAGE_TAG
 
-          echo "Deployment starting for $DOCKER_IMAGE"
+          echo "Triggering deployment for service ID: $RENDER_SERVICE_ID"
           if render deploys list "$RENDER_SERVICE_ID" -o json >/dev/null 2>&1; then
             render deploys create $RENDER_SERVICE_ID \
               --image $DOCKER_IMAGE \
