@@ -42,14 +42,21 @@ jobs:
               echo "Node.js version ${NODE_VERSION} is already installed."
             else
               echo "Node.js version mismatch (found v${CURRENT_VERSION}, expected v${NODE_VERSION}). Updating..."
-              curl -o- https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | bash
-              brew install node@${{ env.NODE_VERSION }}
+              curl -fsSL https://nodejs.org/dist/v${{ env.NODE_VERSION }}/node-v${{ env.NODE_VERSION }}-linux-x64.tar.xz -o node.tar.xz
+              sudo mkdir -p /usr/local/node
+              sudo tar -xJf node.tar.xz -C /usr/local/node --strip-components=1
+              rm node.tar.xz
+              export PATH=/usr/local/node/bin:$PATH
               echo "Node.js updated to version $(node -v)"
             fi
           else
             echo "Node.js is not installed. Installing Node.js version ${{ env.NODE_VERSION }}..."
-            curl -o- https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | bash
-            brew install node@${{ env.NODE_VERSION }}
+            curl -fsSL https://nodejs.org/dist/v${{ env.NODE_VERSION }}/node-v${{ env.NODE_VERSION }}-linux-x64.tar.xz -o node.tar.xz
+            sudo mkdir -p /usr/local/node
+            sudo tar -xJf node.tar.xz -C /usr/local/node --strip-components=1
+            rm node.tar.xz
+            export PATH=/usr/local/node/bin:$PATH
+
             echo "Node.js installed successfully."
           fi
           echo "Node.js version: $(node -v)"
