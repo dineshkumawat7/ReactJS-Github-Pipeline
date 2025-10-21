@@ -70,7 +70,7 @@ jobs:
       - name: Install dependencies
         run: |
           echo "Installing dependencies..."
-          if npm install --no-optional --prefer-offline; then
+          if npm install --prefer-offline; then
             echo "Dependencies installed successfully."
           else
             echo "Failed to install dependencies. Exiting..." >&2
