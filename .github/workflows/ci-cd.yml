@@ -15,8 +15,8 @@ env:
   DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   IMAGE_NAME: react-vite-app
   IMAGE_TAG: "${GITHUB_SHA::7}"
-  RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
-  RENDER_SERVICE_NAME: test-react-render-service
+  RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+  RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
 jobs:
   build:
     runs-on: self-hosted
@@ -200,6 +200,7 @@ jobs:
             exit 1
           fi
           echo "Docker image build, tag, and push completed!"
+
   deploy:
     runs-on: self-hosted
     needs: build
@@ -269,7 +270,7 @@ jobs:
       #===============================================================
       - name: Log in to Render CLI
         env:
-          RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
         run: |
           echo "Logging in to Render CLI..."
           export RENDER_API_KEY="$RENDER_API_KEY"
@@ -281,17 +282,14 @@ jobs:
       #===============================================================
       - name: Trigger deploy with Render CLI
         env:
-          RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
+          RENDER_SERVICE_ID: ${{ env.RENDER_SERVICE_ID }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+          DOCKERHUB_USERNAME: ${{ env.DOCKERHUB_USERNAME }}
         run: |
-          IMAGE_NAME=${{ env.IMAGE_NAME }}
-          IMAGE_TAG=${{ env.IMAGE_TAG }}
-          DOCKERHUB_USERNAME=${{ env.DOCKERHUB_USERNAME }}
+          echo "Triggering deployment for service ID: $RENDER_SERVICE_ID"
           DOCKER_IMAGE="$DOCKERHUB_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
-
-          export RENDER_API_KEY="$RENDER_API_KEY"
-
-          echo "Triggering deployment for service ID: $SERVICE_ID"
-          render deploys create srv-d3rn826r433s73eahqe0 \
+          render deploys create $RENDER_SERVICE_ID \
             --image $DOCKER_IMAGE \
             --output json --confirm
           echo "Deployment success..."
