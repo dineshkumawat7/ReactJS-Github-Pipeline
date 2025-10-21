@@ -1,4 +1,4 @@
-name: React Build Pipeline
+name: React + Vite CI/CD Pipeline
 
 on:
   push:
@@ -6,26 +6,25 @@ on:
   pull_request:
     branches: [master]
 
-#### Global environment variable ####
+#===============================================================
+################# Global environment variable ##################
+#===============================================================
 env:
   NODE_VERSION: 22
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
   DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-  IMAGE_NAME: react-app
-  CONTAINER_NAME: react-container
-  REGISTRY: docker.io
-  IMAGE_TAG: latest
+  IMAGE_NAME: react-vite-app
+  IMAGE_TAG: "${GITHUB_SHA::7}"
   RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
-  DOCKER_IMAGE: dinesh7627/react-app:latest
   RENDER_SERVICE_NAME: test-react-render-service
-  RENDER_SERVICE_TYPE: web_service
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      #### 1. Checkout the latest code ####
+      #===============================================================
+      ################# 1. Checkout the latest code ##################
+      #===============================================================
       - name: Checkout the latest code
         run: |
           echo "Checking out latest code..."
@@ -41,12 +40,26 @@ jobs:
           git status
           echo "Checkout completed successfully!"
 
-      #### 2.  Set up Node.js environment ####
+      #================================================================
+      ################# 2. Set up Node.js environment #################
+      #================================================================
       - name: Set up Node.js environment
         run: |
           echo "Setting up Node.js environment..."
           if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
-            echo "Node.js is already installed."
+            CURRENT_VERSION=$(node -v | sed 's/v//g' | cut -d. -f1)
+            echo "Current Node.js version: $CURRENT_VERSION"
+            if [ "$CURRENT_VERSION" -eq "${NODE_VERSION}" ]; then
+              echo "Node.js version ${NODE_VERSION} is already installed."
+            else
+              echo "Node.js version mismatch (found v${CURRENT_VERSION}, expected v${NODE_VERSION}). Updating..."
+              curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}.x/node-v${NODE_VERSION}.x-linux-x64.tar.xz -o node.tar.xz
+              sudo mkdir -p /usr/local/node
+              sudo tar -xJf node.tar.xz -C /usr/local/node --strip-components=1
+              rm node.tar.xz
+              export PATH=/usr/local/node/bin:$PATH
+              echo "Node.js updated to version $(node -v)"
+            fi
           else
             echo "Node.js is not installed. Installing Node.js version ${{ env.NODE_VERSION }}..."
             curl -fsSL https://nodejs.org/dist/v${{ env.NODE_VERSION }}/node-v${{ env.NODE_VERSION }}-linux-x64.tar.xz -o node.tar.xz
@@ -61,18 +74,39 @@ jobs:
           echo "npm version: $(npm -v)"
           echo "Node.js environment setup completed."
 
-      #### 3. Install dependencies ####
+      #==================================================================
+      ################# 3. Install project dependencies #################
+      #==================================================================
       - name: Install dependencies
         run: |
           echo "Installing dependencies..."
-          if npm install; then
-            echo "Dependencies installed successfully."
+          if [ -f "package-lock.json" ]; then
+            echo "Detected package-lock.json — running 'npm ci' for a clean install..."
+            if npm ci --no-audit --prefer-offline; then
+              echo "Dependencies installed successfully using 'npm ci'."
+            else
+              echo "npm ci failed — retrying once with 'npm install'..."
+              if npm install --no-audit --prefer-offline; then
+                echo "Dependencies installed successfully using 'npm install'."
+              else
+                echo "Failed to install dependencies. Exiting..." >&2
+                exit 1
+              fi
+            fi
           else
-            echo "Failed to install dependencies."
-            exit 1
+            echo "No package-lock.json found — running 'npm install'..."
+            if npm install --no-audit --prefer-offline; then
+              echo "Dependencies installed successfully using 'npm install'."
+            else
+              echo "Failed to install dependencies. Exiting..." >&2
+              exit 1
+            fi
           fi
+          echo "Dependency installation completed."
 
-      #### 4. Run tests ####
+      #=================================================================
+      ######################### 4. Run tests  ##########################
+      #=================================================================
       # - name: Run tests
       #   run: |
       #     echo "Running tests..."
@@ -88,7 +122,9 @@ jobs:
       #       fi
       #     fi
 
-      #### 5. Build React app ####
+      #===============================================================
+      ###################### 5. Build React app ######################
+      #===============================================================
       - name: Build React app
         run: |
           echo "Building the React app..."
@@ -99,6 +135,9 @@ jobs:
             exit 1
           fi
 
+      #================================================================
+      ############## 6. Checking for Docker installation ##############
+      #================================================================
       - name: Checking for Docker installation
         run: |
           echo "Checking for Docker installation..."
@@ -133,38 +172,83 @@ jobs:
           docker --version
           echo "Docker setup check completed."
 
+      #================================================================
+      ################# 7. Log in to Docker Hub ################
+      #================================================================
       - name: Log in to Docker Hub
         env:
           DOCKERHUB_USERNAME: ${{ env.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ env.DOCKERHUB_TOKEN }}
         run: |
           echo "Logging in to Docker Hub..."
-          echo "${DOCKERHUB_TOKEN}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
-          echo "Logged in to Docker Hub successfully."
+          if echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin; then
+            echo "Logged in to Docker Hub successfully."
+          else
+            echo "Docker Hub login failed. Exiting..." >&2
+            exit 1
+          fi
 
-      - name: Build Docker image
+      #================================================================
+      ################# Build, Tag & Push Docker image ################
+      #================================================================
+      - name: Build, Tag & Push Docker Image
         run: |
-          echo "Building Docker image: ${{ env.IMAGE_NAME }}..."
-          docker build -t ${{ env.IMAGE_NAME }} .
-          echo "Docker image built successfully: ${{ env.IMAGE_NAME }}"
+          IMAGE_NAME=${{ env.IMAGE_NAME }}
+          IMAGE_TAG=${{ env.IMAGE_TAG }}
+          DOCKERHUB_USERNAME=${{ env.DOCKERHUB_USERNAME }}
+          DOCKER_IMAGE="$DOCKERHUB_USERNAME/$IMAGE_NAME"
 
-      - name: Tag image
-        run: |
+          echo "Image Name      : $IMAGE_NAME"
+          echo "Image Tag       : $IMAGE_TAG"
+          echo "Docker Hub Repo : $DOCKER_IMAGE"
+          echo "--------------------------------------------------"
+
+          echo "Building Docker image: $IMAGE_NAME..."
+          if docker build -t $IMAGE_NAME:$IMAGE_TAG .; then
+            echo "Docker image built successfully: $IMAGE_NAME:$IMAGE_TAG"
+          else
+            echo "Failed to build Docker image. Exiting..." >&2
+            exit 1
+          fi
+
           echo "Tagging Docker image for Docker Hub..."
-          docker tag ${{ env.IMAGE_NAME }} ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
-          echo "Docker image tagged successfully: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest"
+          if docker tag $IMAGE_NAME:$IMAGE_TAG $DOCKER_IMAGE:latest; then
+            echo "Docker image tagged successfully: $DOCKER_IMAGE:latest"
+          else
+            echo "Failed to tag Docker image. Exiting..." >&2
+            exit 1
+          fi
 
-      - name: Push image to Docker Hub
+          echo "Pushing Docker image to Docker Hub..."
+          if docker push $DOCKER_IMAGE:$IMAGE_TAG; then
+            echo "Docker image pushed successfully to Docker Hub: $DOCKER_IMAGE:$IMAGE_TAG"
+          else
+            echo "Failed to push Docker image to Docker Hub. Exiting..." >&2
+            exit 1
+          fi
+
+      #================================================================
+      ################# Build, Tag & Push Docker image ################
+      #================================================================
+      - name: Build, Tag & Push Docker Image
         run: |
           echo "Pushing Docker image to Docker Hub..."
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
-          echo "Docker image pushed successfully to Docker Hub: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest"
+           DOCKER_IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}"
+          if docker push $DOCKER_IMAGE:latest; then
+            echo "Docker image pushed successfully to Docker Hub: $DOCKER_IMAGE:latest"
+          else
+            echo "Failed to push Docker image to Docker Hub. Exiting..." >&2
+            exit 1
+          fi
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Install Render CLI
+      #===============================================================
+      ########## 1. Checking for Render CLI installation #############
+      #===============================================================
+      - name: Checking for Render CLI installation
         run: |
           echo "Checking for Render CLI installation..."
 
@@ -187,14 +271,14 @@ jobs:
           echo "Render CLI Version: $(render --version)"
           echo "Render CLI setup completed successfully."
 
+      #===============================================================
+      ################## 2. Log in to Render CLI #####################
+      #===============================================================
       - name: Log in to Render CLI
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
         run: |
-
-          echo "---------------------------------------"
           echo "Logging in to Render CLI..."
-          echo "---------------------------------------"
           export RENDER_API_KEY="$RENDER_API_KEY"
           render login -o json
           echo "Login successful!"
@@ -240,6 +324,10 @@ jobs:
             echo "Existing service found with ID: $SERVICE_ID"
             echo "SERVICE_ID=$SERVICE_ID" >> $GITHUB_ENV
           fi
+
+      #===============================================================
+      ################# Deploy Docker image on Render ################
+      #===============================================================
 
       # 5. Deploy Docker image on Render
       - name: Trigger deploy with Render CLI
