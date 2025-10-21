@@ -17,10 +17,9 @@ env:
   IMAGE_TAG: "${GITHUB_SHA::7}"
   RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
   RENDER_SERVICE_NAME: test-react-render-service
-
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       #===============================================================
       ################# 1. Checkout the latest code ##################
@@ -179,7 +178,7 @@ jobs:
           fi
 
       #================================================================
-      ################# Build, Tag & Push Docker image ################
+      ################ 8. Build, Tag & Push Docker image ##############
       #================================================================
       - name: Build, Tag & Push Docker Image
         run: |
@@ -218,11 +217,45 @@ jobs:
           fi
           echo "Docker image build, tag, and push completed!"
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: build
     steps:
+      #================================================================
+      ################# 1. Log in to Docker Hub ################
+      #================================================================
+      - name: Log in to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ env.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ env.DOCKERHUB_TOKEN }}
+        run: |
+          echo "Logging in to Docker Hub..."
+          if echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin; then
+            echo "Logged in to Docker Hub successfully."
+          else
+            echo "Docker Hub login failed. Exiting..." >&2
+            exit 1
+          fi
+
       #===============================================================
-      ########## 1. Checking for Render CLI installation #############
+      ############ 2. Pull Docker image from DockerHub ###############
+      #===============================================================
+      - name: Pull Docker image from DockerHub
+        run: |
+          IMAGE_NAME=${{ env.IMAGE_NAME }}
+          IMAGE_TAG=${{ env.IMAGE_TAG }}
+          DOCKERHUB_USERNAME=${{ env.DOCKERHUB_USERNAME }}
+          DOCKER_IMAGE="$DOCKERHUB_USERNAME/$IMAGE_NAME:$IMAGE_TAG"
+
+          echo "Pulling docker image from DockerHub... $DOCKER_IMAGE"
+          if docker pull "$DOCKER_IMAGE"; then
+            echo "Successfully pulled image: $DOCKER_IMAGE"
+          else
+            echo "Failed to pull Docker image. Exiting..." >&2
+            exit 1
+          fi
+
+      #===============================================================
+      ########## 3. Checking for Render CLI installation #############
       #===============================================================
       - name: Checking for Render CLI installation
         run: |
@@ -248,7 +281,7 @@ jobs:
           echo "Render CLI setup completed successfully."
 
       #===============================================================
-      ################## 2. Log in to Render CLI #####################
+      ################## 4. Log in to Render CLI #####################
       #===============================================================
       - name: Log in to Render CLI
         env:
@@ -258,9 +291,12 @@ jobs:
           export RENDER_API_KEY="$RENDER_API_KEY"
           render login -o json
           echo "Login successful!"
-          echo "Render Authenticated user:"
+          # echo "Render Authenticated user:"
           # render whoami -o json
 
+      #===============================================================
+      ################ 5. Ensure Render Service Exists ###############
+      #===============================================================
       - name: Ensure Render Service Exists
         run: |
           echo "Checking if Render service '$RENDER_SERVICE_NAME' exists..."
@@ -302,14 +338,12 @@ jobs:
           fi
 
       #===============================================================
-      ################# Deploy Docker image on Render ################
+      ############### 6. Deploy Docker image on Render ###############
       #===============================================================
-
-      # 5. Deploy Docker image on Render
       - name: Trigger deploy with Render CLI
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_SERVICE_API_KEY }}
           CI: true
         run: |
           echo "Triggering deployment for service ID: $SERVICE_ID"
-          render deploys create $SERVICE_ID --output json --confirm
+          render deploys create srv-d3rn826r433s73eahqe0 --output json --confirm
