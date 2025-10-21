@@ -87,29 +87,12 @@ jobs:
       - name: Install dependencies
         run: |
           echo "Installing dependencies..."
-          if [ -f "package-lock.json" ]; then
-            echo "Detected package-lock.json — running 'npm ci' for a clean install..."
-            if npm ci --no-optional --prefer-offline --progress=false --force; then
-              echo "Dependencies installed successfully using 'npm ci'."
-            else
-              echo "npm ci failed — retrying once with 'npm install'..."
-              if npm install --no-audit --prefer-offline; then
-                echo "Dependencies installed successfully using 'npm install'."
-              else
-                echo "Failed to install dependencies. Exiting..." >&2
-                exit 1
-              fi
-            fi
+          if npm install --no-optional --prefer-offline; then
+            echo "Dependencies installed successfully."
           else
-            echo "No package-lock.json found — running 'npm install'..."
-            if npm install --no-optional --prefer-offline --progress=false --force; then
-              echo "Dependencies installed successfully using 'npm install'."
-            else
-              echo "Failed to install dependencies. Exiting..." >&2
-              exit 1
-            fi
+            echo "Failed to install dependencies. Exiting..." >&2
+            exit 1
           fi
-          echo "Dependency installation completed."
 
       #=================================================================
       ######################### 4. Run tests  ##########################
