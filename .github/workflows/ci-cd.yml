@@ -10,7 +10,7 @@ on:
 ################# Global environment variable ##################
 #===============================================================
 env:
-  NODE_VERSION: 22.21.0
+  NODE_VERSION: 22
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
   DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   IMAGE_NAME: react-vite-app
